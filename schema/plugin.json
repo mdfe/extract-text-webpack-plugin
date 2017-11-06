@@ -32,6 +32,10 @@
         "type": ["string", "object", "array"]
       }
     },
+    "md": {
+      "description": "明道特殊流程",
+      "type": "boolean"
+    },
     "publicPath": {
       "description": "",
       "type": "string"

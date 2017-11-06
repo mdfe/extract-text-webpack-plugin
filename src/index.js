@@ -55,6 +55,44 @@ class ExtractTextPlugin {
     return ExtractTextPlugin.loader(mergeOptions({ id: this.id }, options));
   }
 
+  mdMergeChunks(chunks, compilation) {
+    const initialChunks = chunks.filter(c => isInitialOrHasNoParents(c));
+    const indexChunk = initialChunks.filter(c => c.name === 'index')[0];
+    const indexChildChunks = chunks.filter(c => c.parents.some(p => p.name === 'index'));
+    const preloadChunk = new Chunk('preload');
+    preloadChunk.originalChunk = compilation.addChunk('preload');
+
+    function addChunkModulesToArray(chunk, modules, checkedChunks) {
+      chunk.forEachModule((module) => {
+        if (modules.indexOf(module) === -1) modules.push(module);
+      });
+      checkedChunks.push(chunk);
+      chunk.chunks.forEach((c) => {
+        if (checkedChunks.indexOf(c) === -1) addChunkModulesToArray(c, modules, checkedChunks);
+      }, this);
+    }
+    const allModules = [];
+    chunks.forEach((chunk) => {
+      addChunkModulesToArray(chunk, allModules, []);
+    });
+
+    // const allModules = compilation.modules;
+    const preloadModules = allModules.slice();
+    indexChildChunks.forEach((chunk) => {
+      chunk.forEachModule((module) => {
+        indexChunk.addModule(module);
+        module.addChunk(indexChunk);
+        preloadModules.splice(preloadModules.indexOf(module), 1);
+      });
+    });
+    preloadModules.forEach((module) => {
+      preloadChunk.addModule(module);
+      module.addChunk(preloadChunk);
+    });
+
+    chunks.push(preloadChunk);
+  }
+
   mergeNonInitialChunks(chunk, intoChunk, checkedChunks) {
     if (!intoChunk) {
       checkedChunks = [];
@@ -180,9 +218,13 @@ class ExtractTextPlugin {
           });
         }, (err) => {
           if (err) return callback(err);
-          extractedChunks.forEach((extractedChunk) => {
-            if (isInitialOrHasNoParents(extractedChunk)) { this.mergeNonInitialChunks(extractedChunk); }
-          }, this);
+          if (options.md) {
+            this.mdMergeChunks(extractedChunks, compilation);
+          } else {
+            extractedChunks.forEach((extractedChunk) => {
+              if (isInitialOrHasNoParents(extractedChunk)) { this.mergeNonInitialChunks(extractedChunk); }
+            }, this);
+          }
           extractedChunks.forEach((extractedChunk) => {
             if (!isInitialOrHasNoParents(extractedChunk)) {
               extractedChunk.forEachModule((module) => {

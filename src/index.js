@@ -71,13 +71,13 @@ class ExtractTextPlugin {
         if (checkedChunks.indexOf(c) === -1) addChunkModulesToArray(c, modules, checkedChunks);
       }, this);
     }
-    const allModules = [];
+    const preloadModules = [];
     chunks.forEach((chunk) => {
-      addChunkModulesToArray(chunk, allModules, []);
+      if (!isInitialOrHasNoParents(chunk)) {
+        addChunkModulesToArray(chunk, preloadModules, []);
+      }
     });
 
-    // const allModules = compilation.modules;
-    const preloadModules = allModules.slice();
     indexChildChunks.forEach((chunk) => {
       chunk.forEachModule((module) => {
         indexChunk.addModule(module);

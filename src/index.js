@@ -82,7 +82,7 @@ class ExtractTextPlugin {
       chunk.forEachModule((module) => {
         indexChunk.addModule(module);
         module.addChunk(indexChunk);
-        preloadModules.splice(preloadModules.indexOf(module), 1);
+        if (preloadModules.indexOf(module) > -1) preloadModules.splice(preloadModules.indexOf(module), 1);
       });
     });
     preloadModules.forEach((module) => {
